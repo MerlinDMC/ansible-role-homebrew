@@ -1,14 +1,42 @@
 ---
 
-- name: install homebrew via git clone
-  git: repo="{{ homebrew_repository }}" dest=/usr/local depth=1
+- name: Check if homebrew is already cloned
+  stat:
+    path="{{ homebrew_prefix }}/.git"
+  register: homebrew_repo_cloned
 
-- name: install homebrew taps
+- name: Update homebrew
+  homebrew: update_homebrew=yes
+  when: homebrew_repo_cloned.stat.exists
+
+- block:
+    - name: Initialise repository
+      command: git init -q
+      args:
+        chdir: "{{ homebrew_prefix }}"
+    - name: Configure repository remote
+      command: git config remote.origin.url "{{ homebrew_repository }}"
+      args:
+        chdir: "{{ homebrew_prefix }}"
+    - name: Configure repository remote fetch
+      command: git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+      args:
+        chdir: "{{ homebrew_prefix }}"
+    - name: Fetch changes
+      command: git fetch origin "master:refs/remotes/origin/master" -n --depth=1
+      args:
+        chdir: "{{ homebrew_prefix }}"
+    - name: Reset to origin/master
+      command: git reset --hard origin/master
+      args:
+        chdir: "{{ homebrew_prefix }}"
+  rescue:
+    - file: path="{{ homebrew_prefix }}/.git" state=absent
+  when: not homebrew_repo_cloned.stat.exists
+
+- name: Install homebrew taps
   homebrew_tap: tap={{ item }} state=present
   with_items:
     - homebrew/services
     - homebrew/dupes
     - caskroom/cask
-
-- name: update and upgrade homebrew
-  homebrew: update_homebrew=yes upgrade_all=yes

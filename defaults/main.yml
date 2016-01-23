@@ -1,3 +1,4 @@
 ---
 
-homebrew_repository: https://github.com/Homebrew/homebrew
+homebrew_repository: https://github.com/Homebrew/homebrew.git
+homebrew_prefix: /usr/local
